@@ -1,0 +1,427 @@
+
+<!DOCTYPE html>
+
+<!--
+
+CS571 (Spring 2018) : Assignment 3 - Tetris Game
+
+
+-->
+
+<html>
+    <head>
+        <title>CS571 : Play Tetris</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+        <style>
+
+            canvas {
+                border: 1px solid #d3d3d3;
+                background-color: #f1f1f1;
+                padding: 0;
+                margin: auto;
+                position: absolute;
+                top: 0;
+                bottom: 0;
+                left: 0;
+                right: 0;
+            }
+
+            .wrap {
+                text-align: center;
+                padding: 50px;
+                font-size: 200px;
+            }
+
+            div {
+                padding-top: 50px;
+                padding-right: 50px;
+                padding-bottom: 50px;
+                padding-left: 50px;
+            }
+
+        </style>
+
+    </head>
+
+
+    <body onload = startGame()>
+
+        <div align = "center">
+            <h2>CS571 : Assignment 3 - Tetris</h2>
+            <h3>Group Members - </h3>
+            <table>
+                <tr>
+                    <td>1. Shriram Suryawanshi</td>
+                    <td> : ssuryaw1@binghamton.edu</td>
+                </tr>
+                <tr>
+                    <td>2. Vinen Furtado</td>
+                    <td> : vfurtad1@binghamton.edu</td>
+                </tr>
+            </table>
+            <br>
+            <br>
+        </div>
+
+
+        <script>
+
+            var myGamePiece;
+            var myBlocks = [];
+            var stopBlocks = [];
+            var newBlock = false;
+            var firstBlock = true;
+            var blockList = [];
+            
+			var level = new Array(12);
+            for (i = 0; i < 12; i++) {
+                level[i] = new Array(9);
+                for (j = 0; j < 9; j++)
+                    level[i][j] = -1;
+            }
+
+            var cnt = new Array(12);
+            for (i = 0; i < 12; i++)
+                cnt[i] = 0;
+            
+			var left = false;
+            var right = false;
+            var stop = false;
+            var alertmsg = false;
+            
+			
+			function startGame() {
+                myGameArea.start();
+            }
+
+
+            var myGameArea = {
+
+                canvas: document.createElement("canvas"),
+                start: function () {
+                    this.canvas.width = 180;
+                    this.canvas.height = 240;
+                    this.context = this.canvas.getContext("2d");
+                    document.body.insertBefore(this.canvas, document.body.childNodes[0]);
+                    this.frameNo = 0;
+                    this.interval = setInterval(updateGameArea, 20);
+                    window.addEventListener('keydown', function (e) {
+                        myGameArea.key = e.keyCode;
+                    })
+
+                    window.addEventListener('keyup', function (e) {
+                        myGameArea.key = false;
+                    })
+                },
+            
+			clear: function () {
+                    this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                },
+
+                stop: function () {
+                    clearInterval(this.interval);
+                }
+            }
+
+
+            function component(width, height, color, x, y) {
+                this.width = width;
+                this.height = height;
+                this.x = x;
+                this.y = y;
+                this.update = function () {
+                    ctx = myGameArea.context;
+                    ctx.fillStyle = color;
+                    ctx.fillRect(this.x, this.y, this.width, this.height);
+                }
+
+                this.newPos = function () {
+                    this.x += this.speedX;
+                    this.y += this.speedY;
+                }
+            }
+
+
+            function updateGameArea() {
+                var y, n, pos;
+                myGameArea.clear();
+                myGameArea.frameNo += 1;
+               
+                if (myGameArea.frameNo === 1 || newBlock) {
+                
+                    n = Math.floor(Math.random() * 4) + 1;
+                    max = 180 - (n * 20);
+                    
+                    pos = Math.floor(Math.random() * max);
+                    pos = pos - (pos % 20);
+
+                    if (n === 1)
+                        myBlocks.push(new component(20, 20, "red", pos, 0));
+                    else if (n === 2)
+                        myBlocks.push(new component(40, 20, "red", pos, 0));
+                    else if (n === 3)
+                        myBlocks.push(new component(60, 20, "red", pos, 0));
+                    else if (n === 4)
+                        myBlocks.push(new component(80, 20, "red", pos, 0));
+
+					blockList.push(n);
+                    newBlock = false;
+                }
+              
+                if (myGameArea.key && myGameArea.key === 37) {
+                    myGameArea.key = false;
+                    left = true;
+                }
+
+                if (myGameArea.key && myGameArea.key === 39) {
+                    myGameArea.key = false;
+                    right = true;
+                }
+
+                for (var i = 0; ((i < myBlocks.length) || !stop); i++) {
+
+                    if (stop) {
+                        newBlock = false;
+                        if (!alertmsg) {
+                            window.alert("Game Over!\nPlease reload/refresh the page to play again.");
+                            alertmsg = true;
+                        }
+
+                        myBlocks[i].update();
+                    } else {
+ 
+                        if ((myBlocks[i].y === 220 && !stopBlocks.includes(i)) || (myBlocks[i].y === 220 && firstBlock)) {
+                            stopBlocks.push(i);
+                            level[0][cnt[0]] = i;
+                             cnt[0]++;
+
+                             clearLine(Math.abs((myBlocks[i].y / 20) - 11));
+
+                            newBlock = true;
+                            firstBlock = false;
+                        }                                                                                        
+                        else if (!stopBlocks.includes(i)) {
+                            
+                            if ((myBlocks[i].y % 20) === 0) {
+
+                                if (!(allowDown(myBlocks[i].x, myBlocks[i].y, i)))
+                                {
+                                    stopBlocks.push(i);
+                                    level[Math.abs((myBlocks[i].y / 20) - 11)][cnt[Math.abs((myBlocks[i].y / 20) - 11)]] = i;
+                                    cnt[Math.abs((myBlocks[i].y / 20) - 11)]++;
+
+                                    clearLine(Math.abs((myBlocks[i].y / 20) - 11));
+
+                                    if (Math.abs((myBlocks[i].y / 20) - 11) === 11) {
+                                        stop = true;
+                                        newBlock = false;
+                                    } else
+                                        newBlock = true;
+                                } else {
+                                    myBlocks[i].y += 1;
+                                    clearLine(Math.abs((myBlocks[i].y / 20) - 11));
+                                }
+                            } else {
+                                myBlocks[i].y += 1;
+                            }
+
+                            if (left) {
+                                if (!(myBlocks[i].x === 0))                                                          
+                                    if (allowLeft(myBlocks[i].x, myBlocks[i].y, i))
+                                        myBlocks[i].x -= 20;
+                                left = false;
+                            }
+
+                             if (right) {
+                                if (!((myBlocks[i].x + (blockList[i] * 20)) === 180))                     
+                                    if (allowRight(myBlocks[i].x, myBlocks[i].y, i))
+                                        myBlocks[i].x += 20;
+                                right = false;
+                            }
+                        }
+                           myBlocks[i].update();
+                    }
+                }
+            }
+
+   
+            function allowDown(x, y, i) {
+
+                xmin = x;
+                xmax = x + blockList[i] * 20;
+
+                for (a = 0; a < 9; a++) {
+
+                    if (level[Math.abs((y / 20) - 10)][a] >= 0) {
+                        xtemp_min = myBlocks[level[Math.abs((y / 20) - 10)][a]].x;
+                        xtemp_max = myBlocks[level[Math.abs((y / 20) - 10)][a]].x + (blockList[level[Math.abs((y / 20) - 10)][a]] * 20);
+                        if (xmin < xtemp_min && xmax <= xtemp_min)
+                        {
+                        } else if (xmin >= xtemp_max)
+                        {
+                        } else if (xmin < xtemp_min && xmax > xtemp_min)
+                            return false;
+                        else if (xmin >= xtemp_min && xmin <= xtemp_max)
+                            return false;
+                    }
+                }
+                return true;
+            }
+
+
+             function allowLeft(x, y, i) {
+
+                xmin = x;
+                chk_min = Math.floor(Math.abs((y / 20) - 11));
+
+                if (cnt[chk_min] === 0)
+                    return true;
+                else
+                    for (a = 0; a < 9; a++) {
+                        if (level[chk_min][a] === -1)
+                            break;
+                         xtemp_min = myBlocks[level[chk_min][a]].x + (blockList[level[chk_min][a]] * 20);
+                        if (xmin === xtemp_min)
+                            return false;
+                    }
+                return true;
+            }
+
+
+            function allowRight(x, y, i) {
+
+                xmin = x + blockList[i] * 20;
+                chk_min = Math.floor(Math.abs((y / 20) - 11));
+
+                if (cnt[chk_min] === 0)
+                    return true;
+                else
+                    for (a = 0; a < 9; a++) {
+                        if (level[chk_min][a] === -1)
+                            break;
+                         xtemp_min = myBlocks[level[chk_min][a]].x;
+                        if (xmin === xtemp_min)
+                            return false;
+                    }
+                return true;
+            }
+
+
+            function clearLine(lcnt) {
+
+                var xmin = 0;
+                var clear = false;
+
+                var min = [];
+                var max = [];
+
+                if (cnt[lcnt] > 2) {                                  
+
+                    //for (a = 0; a < 9; a++) {
+                    //if (level[lcnt][a] >= 0) {
+                    //xtemp_min = myBlocks[level[lcnt][a]].x;
+                    //xtemp_max = myBlocks[level[lcnt][a]].x + (blockList[level[lcnt][a]] * 20);
+                    //if (xmin === xtemp_min) {
+                    //xmin = xtemp_max;
+                    //a = 0;
+                    //if (xmin === 180)
+                    //clear = true;
+                    //}
+                    //}
+                    //}
+
+                      if (!clear) {
+
+                        for (a = 0; a < 9; a++) {
+                            if (level[lcnt][a] >= 0) {
+                                min.push(myBlocks[level[lcnt][a]].x);
+                                max.push(myBlocks[level[lcnt][a]].x + (blockList[level[lcnt][a]] * 20));
+                            }
+                        }
+
+                        min.sort(function (a, b) {
+                            return a - b
+                        });
+
+                        max.sort(function (a, b) {
+                            return a - b
+                        });
+
+                        for (a = 1; a < min.length; a++) {
+                            if (min[0] === 0 && max[max.length - 1] === 180) {
+                                if (min[a] === max[a - 1])
+                                    clear = true;
+                                else {
+                                    clear = false;
+                                    break;
+                                }
+                            } else {
+                                clear = false;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (clear) {
+                        cnt[lcnt] = 0;
+                        for (a = 0; a < 9; a++) {
+                            if (level[lcnt][a] >= 0) {
+                                myBlocks[level[lcnt][a]].y = 2000;
+                            }
+                        }
+
+                        for (a = lcnt; a < 11; a++) {
+                            cnt[a] = 0;
+                            for (b = 0; b < 9; b++) {
+                                if (level[a + 1][b] >= 0) {
+                                    level[a][b] = level[a + 1][b];
+                                    myBlocks[level[a][b]].y += 20;
+                                    cnt[a]++;
+                                } else
+                                    level[a][b] = -1;
+                            }
+
+                            for (c = 0; c < 9; c++) {
+                                level[a + 1][c] = -1;
+                            }
+                        }
+                    }
+                }
+            }
+
+
+            function moveleft() {
+                left = true;
+            }
+
+			
+            function moveright() {
+                right = true;
+            }
+
+			
+            function clearmove() {
+                myGamePiece.speedX = 0;
+                myGamePiece.speedY = 0;
+            }
+
+        </script>
+
+
+		
+        <div class = "wrap">
+            <button onmousedown="moveleft()" onmouseup="clearmove()">LEFT</button>
+            <button onmousedown="moveright()" onmouseup="clearmove()">RIGHT</button>
+        </div>
+        
+        
+		
+        <div align = "center">      
+            <p>NOTE : Use the button to move block left or right. You can also use arrow keys for the same.<p>
+        </div>
+
+    </body>
+
+</html>
